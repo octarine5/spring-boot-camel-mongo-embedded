@@ -26,6 +26,7 @@ repositories {
 	mavenCentral()
 	maven { url "https://repo.spring.io/snapshot" }
 	maven { url "https://repo.spring.io/milestone" }
+	//maven { url "https://mvnrepository.com/artifact/org.apache.camel/camel-rabbitmq-starter"}
 }
 
 
@@ -34,8 +35,10 @@ dependencies {
 	compile("org.apache.camel:camel-spring-boot-starter:${camelVersion}")
     compile("org.apache.camel:camel-servlet-starter:${camelVersion}")
     compile("org.apache.camel:camel-jackson-starter:${camelVersion}")
-    compile("org.apache.camel:camel-swagger-java-starter:${camelVersion}")
-    compile("de.flapdoodle.embed:de.flapdoodle.embed.mongo:1.50.5")
+	compile("org.apache.camel:camel-rabbitmq-starter:${camelVersion}")
+	compile("org.apache.camel:camel-swagger-java-starter:${camelVersion}")
+	compile("org.apache.camel:camel-mongodb3-starter:${camelVersion}")
+	compile("de.flapdoodle.embed:de.flapdoodle.embed.mongo:1.50.5")
     compile("org.springframework.boot:spring-boot-starter-data-mongodb")
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }

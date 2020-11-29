@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
+
 /**
  * Created by vsinha on 2/19/2018.
  */
@@ -26,11 +28,24 @@ public class RestRouteBuilder extends ExceptionRouteBuilder {
 
     @Autowired
     private PersonAggregationStrategy personAggregationStrategy;
+    private static final String RABBITMQ_XCHG_USR_MSG = "rabbitmq://localhost/XCHG-USRMSG?exchangeType=direct&queue=USRMSGQ&routingKey=usrMsgk&autoDelete=false";
+    private static final String RABBITMQ_DELAY_XCHG = "rabbitmq://localhost/DelayEx?exchangeType=x-delayed-message&queue=DelayQueue&routingKey=delayk&autoDelete=false";
+
+    private static final String MONGODB_XCHG_USR_MSG_SAVE = "mongodb3:mongoBean?database=userdb&collection=user&operation=save";
 
     @Override
     public void configure() throws Exception {
         super.configure();
-
+        from(RABBITMQ_XCHG_USR_MSG)
+                .log("${body}")
+                .convertBodyTo(String.class)
+                //.convertBodyTo(User.class)
+                .to(MONGODB_XCHG_USR_MSG_SAVE);
+        from(RABBITMQ_DELAY_XCHG)
+                .log("${body}")
+                .convertBodyTo(String.class)
+                //.convertBodyTo(User.class)
+                .to(MONGODB_XCHG_USR_MSG_SAVE);
         // http://localhost:8080/camel/api-doc
         restConfiguration().contextPath(contextPath)
                 .port(serverPort)
@@ -49,13 +64,14 @@ public class RestRouteBuilder extends ExceptionRouteBuilder {
                 .get("").id("rest-person-get").consumes("application/json").produces("application/json").to("direct:getAllPerson")
                 // "/person/id"
                 .get("/{id}").id("rest-person-get-id").consumes("application/json").produces("application/json").to("direct:getSinglePerson")
-                .post("").id("rest-person-post").consumes("application/json").produces("application/json").type(Person.class).to("direct:postPerson");
-
+                .post("").id("rest-person-post").consumes("application/json").produces("application/json").type(Person.class).to("direct:postPerson")
+                .post("/rmq").id("rest-message-post").consumes("application/json").produces("application/json").type(Person.class).to("direct:createMessage");
         from("direct:getAllPerson")
                 .id("direct-getAllPerson")
                 .to("log:DEBUG?showBody=true&showHeaders=true")
                 .process(personProcessor);
-
+//        from("direct:startQueuePoint").id("idOfQueueHere")
+//                .to(RABBITMQ_XCHG_USR_MSG).end();
         from("direct:getSinglePerson")
                 .id("direct-getSinglePerson")
                 .to("log:DEBUG?showBody=true&showHeaders=true")
@@ -65,6 +81,16 @@ public class RestRouteBuilder extends ExceptionRouteBuilder {
                 .id("direct-postPerson")
                 .to("log:DEBUG?showBody=true&showHeaders=true")
                 .bean(personProcessor, "insertPerson");
+
+        from("direct:createMessage")
+                .id("direct-postPerson").setBody().constant("{\"foo\":\"bar\"}")
+                .setHeader("rabbitmq.ROUTING_KEY", constant("usrMsgk"))
+                .setHeader("rabbitmq.EXCHANGE_NAME",constant("messageEx"))
+                .setHeader("timestamp", constant(new Date(System.currentTimeMillis())))
+//                .to("direct:rabbitMQmessage")
+//                .bean(personProcessor, "createMessage");
+//        from("direct:rabbitMQmessage").id("message")
+                .to(RABBITMQ_XCHG_USR_MSG).end();
 
 //      --------------------------------------------------
 //        Usage of multicast, seda & aggregation example

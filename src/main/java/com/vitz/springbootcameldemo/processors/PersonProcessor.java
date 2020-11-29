@@ -3,18 +3,12 @@ package com.vitz.springbootcameldemo.processors;
 import com.vitz.springbootcameldemo.models.Person;
 import com.vitz.springbootcameldemo.models.Response;
 import com.vitz.springbootcameldemo.repositories.PersonRepository;
-import org.apache.camel.Exchange;
-import org.apache.camel.Header;
-import org.apache.camel.Processor;
+import org.apache.camel.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import static com.vitz.springbootcameldemo.utils.Utility.createResponse;
 
@@ -27,6 +21,8 @@ public class PersonProcessor implements Processor {
 
     @Autowired
     private PersonRepository personRepository;
+    @Produce(uri = "direct:startRabbitMQPoint")
+    private ProducerTemplate template;
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -51,6 +47,13 @@ public class PersonProcessor implements Processor {
         Person person = personRepository.insert(exchange.getIn().getBody(Person.class));
         exchange.getOut().setHeader(Exchange.HTTP_RESPONSE_CODE, "201");
         return createResponse(person, "Successful creation", "201");
+    }
+
+    public Response<String> createMessage(Exchange exchange) {
+        //Person person = personRepository.insert(exchange.getIn().getBody(Person.class));
+        String message = "test rabbitMQ message";
+        template.asyncSendBody(template.getDefaultEndpoint(), message);
+        return createResponse(message, "Successful creation", "201");
     }
 
     public Person getPerson(@Header("id") String id) {
